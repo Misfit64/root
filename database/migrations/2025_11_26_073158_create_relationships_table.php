@@ -3,6 +3,7 @@
 use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Schema;
+use App\Enums\RelationshipSubType;
 
 return new class extends Migration
 {
@@ -21,8 +22,8 @@ return new class extends Migration
             $table->text('notes')->nullable();
             $table->timestamps();
 
-            $table->check('relationship_type in (1,2,3)');
-            $table->check('relationship_subtype in (1,2,3,4)');
+            // $table->check('relationship_type in (1,2,3)');
+            // $table->check('relationship_subtype in (1,2,3,4)');
         });
     }
 
