@@ -3,6 +3,12 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
+use App\Enums\RelationshipType;
+use App\Enums\RelationshipSubtype;
+use App\Models\Person;
+use App\Models\FamilyTree;
+use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Database\Eloquent\Scope;
 
 class Relationship extends Model
 {
@@ -51,5 +57,13 @@ class Relationship extends Model
     public function spouses(Builder $query)
     {
         return $query->where('relationship_type', RelationshipType::Spouse->value);
+    }
+
+    public function checkRelation(Person $person, Person $relative, RelationshipType $relationshipType)
+    {
+        return $this->where('person_id', $person->id)
+            ->where('relative_id', $relative->id)
+            ->where('relationship_type', $relationshipType->value)
+            ->exists();
     }
 }
