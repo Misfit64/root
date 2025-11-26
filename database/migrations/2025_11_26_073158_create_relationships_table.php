@@ -16,7 +16,7 @@ return new class extends Migration
             $table->id();
             $table->foreignId('family_tree_id')->constrained()->cascadeOnDelete();
             $table->foreignId('person_id')->constrained()->cascadeOnDelete();
-            $table->foreignId('relative_id')->constrained()->cascadeOnDelete();
+            $table->foreignId('relative_id')->constrained('people')->cascadeOnDelete();
             $table->unsignedTinyInteger('relationship_type');
             $table->unsignedTinyInteger('relationship_subtype')->default(RelationshipSubType::Unknown->value);
             $table->text('notes')->nullable();

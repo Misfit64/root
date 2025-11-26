@@ -4,11 +4,14 @@ namespace App\Livewire\Person\Actions;
 
 use Livewire\Component;
 use App\Models\Person;
+use Livewire\Attributes\Modelable;
 
 class PersonSearch extends Component
 {
     public $tree;
     public $search = '';
+
+    #[Modelable]
     public $value = null;
 
     public function mount($tree, $value = null)
@@ -20,6 +23,8 @@ class PersonSearch extends Component
     public function selectPerson($id)
     {
         $this->value = $id;
+        $this->search = '';
+        $this->dispatch('person-selected', $id);
     }
 
     public function render()

@@ -3,13 +3,13 @@
         type="text"
         class="border rounded p-2 w-full"
         placeholder="Search a person..."
-        wire:model="search"
+        wire:model.live="search"
     />
 
     @if(strlen($search) > 1)
         <div class="border rounded mt-1 bg-white shadow-md">
             @forelse($results as $result)
-                <div 
+                <div    
                     class="p-2 hover:bg-gray-100 cursor-pointer"
                     wire:click="selectPerson({{ $result->id }})"
                 >
@@ -21,10 +21,10 @@
         </div>
     @endif
 
-    @if($selectedPerson)
+    @if($value)
         <div class="mt-2 p-2 bg-gray-100 rounded">
             Selected: 
-            <strong>{{ App\Models\Person::find($selectedPerson)?->full_name }}</strong>
+            <strong>{{ App\Models\Person::find($value)?->full_name }}</strong>
         </div>
     @endif
 </div>

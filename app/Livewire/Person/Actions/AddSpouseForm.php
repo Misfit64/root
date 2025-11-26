@@ -30,6 +30,7 @@ class AddSpouseForm extends Component
         $addSpouseAction->handle($this->person, $spouse);
 
         $this->dispatch('person-updated'); // tell PersonShow to refresh
+        $this->dispatch('spouse-added');
 
         $this->spouseId = null; // reset the field
     }

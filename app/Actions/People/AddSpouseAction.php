@@ -6,7 +6,7 @@ use App\Models\Person;
 use App\Models\Relationship;
 use Illuminate\Support\Facades\DB;
 use App\Enums\RelationshipType;
-use App\Enums\RelationshipSubtype;
+use App\Enums\RelationshipSubType;
 
 class AddSpouseAction
 {
@@ -31,7 +31,7 @@ class AddSpouseAction
                     'person_id'           => $person->id,
                     'relative_id'         => $spouse->id,
                     'relationship_type'   => RelationshipType::Spouse->value,
-                    'relationship_subtype'=> RelationshipSubtype::Unknown->value,
+                    'relationship_subtype'=> RelationshipSubType::Unknown->value,
                 ]);
             }
 
@@ -42,7 +42,7 @@ class AddSpouseAction
                     'person_id'           => $spouse->id,
                     'relative_id'         => $person->id,
                     'relationship_type'   => RelationshipType::Spouse->value,
-                    'relationship_subtype'=> RelationshipSubtype::Unknown->value,
+                    'relationship_subtype'=> RelationshipSubType::Unknown->value,
                 ]);
             }
         });
