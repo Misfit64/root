@@ -19,6 +19,11 @@ class PersonShow extends Component
     public bool $showAddChild = false;
     public bool $showEditPerson = false;
 
+    // Delete Confirmation State
+    public bool $showDeleteConfirmation = false;
+    public ?int $deleteTargetId = null;
+    public ?string $deleteType = null; // 'spouse', 'parent', 'child'
+
     public function mount(FamilyTree $tree, Person $person)
     {
         $this->tree = $tree;
@@ -90,24 +95,63 @@ class PersonShow extends Component
         $this->showEditPerson = false;
     }
 
+    public function confirmRemoveSpouse($spouseId)
+    {
+        $this->deleteTargetId = $spouseId;
+        $this->deleteType = 'spouse';
+        $this->showDeleteConfirmation = true;
+    }
+
+    public function confirmRemoveParent($parentId)
+    {
+        $this->deleteTargetId = $parentId;
+        $this->deleteType = 'parent';
+        $this->showDeleteConfirmation = true;
+    }
+
+    public function confirmRemoveChild($childId)
+    {
+        $this->deleteTargetId = $childId;
+        $this->deleteType = 'child';
+        $this->showDeleteConfirmation = true;
+    }
+
+    public function cancelDelete()
+    {
+        $this->showDeleteConfirmation = false;
+        $this->deleteTargetId = null;
+        $this->deleteType = null;
+    }
+
+    public function executeDelete(\App\Services\RelationshipRemovalService $remover)
+    {
+        if (!$this->deleteTargetId || !$this->deleteType) return;
+
+        $target = Person::findOrFail($this->deleteTargetId);
+
+        match ($this->deleteType) {
+            'spouse' => $remover->removeSpouse($this->person, $target),
+            'parent' => $remover->removeParent($this->person, $target),
+            'child' => $remover->removeChild($this->person, $target),
+        };
+
+        $this->dispatch('person-updated');
+        $this->cancelDelete();
+    }
+
+    // Deprecated direct remove methods (kept for safety if needed, but unused by view)
     public function removeSpouse($spouseId, \App\Services\RelationshipRemovalService $remover)
     {
-        $spouse = Person::findOrFail($spouseId);
-        $remover->removeSpouse($this->person, $spouse);
-        $this->dispatch('person-updated');
+        $this->confirmRemoveSpouse($spouseId);
     }
 
     public function removeParent($parentId, \App\Services\RelationshipRemovalService $remover)
     {
-        $parent = Person::findOrFail($parentId);
-        $remover->removeParent($this->person, $parent);
-        $this->dispatch('person-updated');
+        $this->confirmRemoveParent($parentId);
     }
 
     public function removeChild($childId, \App\Services\RelationshipRemovalService $remover)
     {
-        $child = Person::findOrFail($childId);
-        $remover->removeChild($this->person, $child);
-        $this->dispatch('person-updated');
+        $this->confirmRemoveChild($childId);
     }
 }

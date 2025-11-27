@@ -12,6 +12,7 @@ class TreeIndex extends Component
 {
     public $name = '';
     public $description = '';
+    public $editingTreeId = null;
 
     public function save()
     {
@@ -20,15 +21,34 @@ class TreeIndex extends Component
             'description' => 'nullable|string|max:1000',
         ]);
 
-        FamilyTree::create([
-            'user_id' => auth()->id(),
-            'name' => $this->name,
-            'description' => $this->description,
-            'slug' => Str::slug($this->name) . '-' . Str::random(6),
-        ]);
+        if ($this->editingTreeId) {
+            $tree = FamilyTree::where('user_id', auth()->id())->findOrFail($this->editingTreeId);
+            $tree->update([
+                'name' => $this->name,
+                'description' => $this->description,
+            ]);
+            $this->dispatch('tree-updated');
+            $this->dispatch('tree-saved');
+        } else {
+            FamilyTree::create([
+                'user_id' => auth()->id(),
+                'name' => $this->name,
+                'description' => $this->description,
+                'slug' => Str::slug($this->name) . '-' . Str::random(6),
+            ]);
+            $this->dispatch('tree-created');
+            $this->dispatch('tree-saved');
+        }
 
-        $this->reset(['name', 'description']);
-        $this->dispatch('tree-created');
+        $this->reset(['name', 'description', 'editingTreeId']);
+    }
+
+    public function edit($id)
+    {
+        $tree = FamilyTree::where('user_id', auth()->id())->findOrFail($id);
+        $this->editingTreeId = $tree->id;
+        $this->name = $tree->name;
+        $this->description = $tree->description;
     }
 
     public function delete($id)

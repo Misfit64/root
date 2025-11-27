@@ -17,7 +17,17 @@ class TreeShow extends Component
     public $search = '';
     public bool $showAddPerson = false;
 
-    protected $listeners = ['person-added' => 'closeAddPerson'];
+    public $personToDeleteId = null;
+    public $showDeleteConfirmation = false;
+    
+    public $editingPersonId = null;
+    public $showEditModal = false;
+
+    protected $listeners = [
+        'person-added' => 'closeAddPerson',
+        'person-edit-closed' => 'closeEditModal',
+        'person-updated' => '$refresh'
+    ];
 
     public function mount(FamilyTree $tree)
     {
@@ -42,6 +52,49 @@ class TreeShow extends Component
     public function closeAddPerson()
     {
         $this->showAddPerson = false;
+        $this->dispatch('$refresh');
+    }
+
+    // Delete Logic
+    public function deletePerson($personId)
+    {
+        $this->personToDeleteId = $personId;
+        $this->showDeleteConfirmation = true;
+    }
+
+    public function confirmDelete()
+    {
+        if ($this->personToDeleteId) {
+            $person = Person::where('family_tree_id', $this->tree->id)->findOrFail($this->personToDeleteId);
+            
+            if ($person->photo_path) {
+                \Illuminate\Support\Facades\Storage::disk('public')->delete($person->photo_path);
+            }
+    
+            $person->delete();
+            $this->dispatch('person-deleted');
+        }
+        
+        $this->cancelDelete();
+    }
+
+    public function cancelDelete()
+    {
+        $this->showDeleteConfirmation = false;
+        $this->personToDeleteId = null;
+    }
+
+    // Edit Logic
+    public function editPerson($personId)
+    {
+        $this->editingPersonId = $personId;
+        $this->showEditModal = true;
+    }
+
+    public function closeEditModal()
+    {
+        $this->showEditModal = false;
+        $this->editingPersonId = null;
         $this->dispatch('$refresh');
     }
 

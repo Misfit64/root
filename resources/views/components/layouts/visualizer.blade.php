@@ -13,10 +13,10 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.5.13/cropper.min.css">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.5.13/cropper.min.js"></script>
 </head>
-<body class="h-full text-gray-900 dark:text-gray-100">
+<body class="h-full flex flex-col text-gray-900 dark:text-gray-100 overflow-hidden">
 
     <!-- Navbar -->
-    <header class="bg-white dark:bg-gray-800 shadow">
+    <header class="bg-white dark:bg-gray-800 shadow z-20 relative">
         <div class="max-w-7xl mx-auto px-4 py-4 flex justify-between items-center">
             <div class="flex items-center gap-4">
                 <a href="/" class="text-xl font-bold text-blue-700 dark:text-blue-400">
@@ -32,6 +32,7 @@
             </div>
 
             <nav>
+                <a href="{{ route('tree.index') }}" class="text-gray-600 hover:text-gray-900 dark:text-gray-300 dark:hover:text-white mr-4">My Trees</a>
                 @auth
                     <form method="POST" action="{{ route('logout') }}" class="inline">
                         @csrf
@@ -45,7 +46,7 @@
     </header>
 
     <!-- Page Content -->
-    <main class="max-w-5xl mx-auto mt-8 px-4">
+    <main class="flex-grow flex flex-col relative overflow-hidden">
         {{ $slot }}
     </main>
 

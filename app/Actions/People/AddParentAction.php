@@ -7,6 +7,7 @@ use App\Models\Relationship;
 use Illuminate\Support\Facades\DB;
 use App\Enums\RelationshipType;
 use App\Enums\RelationshipSubtype;
+use App\Actions\People\AddSpouseAction;
 use Exception;
 
 class AddParentAction
@@ -47,30 +48,62 @@ class AddParentAction
             // Check duplicates C → P
             $existsChild = Relationship::checkRelation($child, $parent, RelationshipType::Child);
 
-            // Create P → C
+            // Create P → C (Parent has Child)
             if (! $existsParent) {
                 Relationship::create([
                     'family_tree_id'      => $child->family_tree_id,
                     'person_id'           => $parent->id,
                     'relative_id'         => $child->id,
-                    'relationship_type'   => RelationshipType::Parent->value,
+                    'relationship_type'   => RelationshipType::Child->value,
                     'relationship_subtype'=> $subtype->value,
                 ]);
             }
 
-            // Create C → P
+            // Create C → P (Child has Parent)
             if (! $existsChild) {
                 Relationship::create([
                     'family_tree_id'      => $child->family_tree_id,
                     'person_id'           => $child->id,
                     'relative_id'         => $parent->id,
-                    'relationship_type'   => RelationshipType::Child->value,
+                    'relationship_type'   => RelationshipType::Parent->value,
                     'relationship_subtype'=> $subtype->value,
                 ]);
             }
+
+
         });
 
+        // 5. Link parents as spouses if applicable
+        if ($subtype === RelationshipSubtype::Biological) {
+            $this->linkParentsAsSpouses($child, $parent);
+        }
+
         return $child->refresh();
+    }
+
+    private function linkParentsAsSpouses(Person $child, Person $newParent): void
+    {
+        // Find the other biological parent
+        $otherParent = $child->parents()
+            ->where('people.id', '!=', $newParent->id)
+            ->where('relationship_subtype', RelationshipSubtype::Biological->value)
+            ->first();
+
+        if ($otherParent) {
+            // Check if they are already spouses
+            $isSpouse = $newParent->spouses()->where('people.id', $otherParent->id)->exists();
+
+            if (!$isSpouse) {
+                // Link them as spouses
+                $addSpouseAction = app(AddSpouseAction::class);
+                try {
+                    $addSpouseAction->handle($newParent, $otherParent);
+                } catch (Exception $e) {
+                    // Ignore if they can't be spouses (e.g. same gender if strict, or other rules)
+                    // For now, we just suppress the error to avoid breaking the parent addition
+                }
+            }
+        }
     }
 
     /**

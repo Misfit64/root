@@ -25,6 +25,8 @@ class Person extends Model
 
     protected $casts = [
         'gender' => Gender::class,
+        'birth_date' => 'date',
+        'death_date' => 'date',
     ];
 
 
@@ -79,5 +81,18 @@ class Person extends Model
         return Attribute::make(
             get: fn () => trim($this->first_name . ' ' . ($this->last_name ?? '')),
         );
+    }
+
+    public function getDefaultPhotoUrlAttribute()
+    {
+        if ($this->photo_path) {
+            return \Illuminate\Support\Facades\Storage::url($this->photo_path);
+        }
+
+        return match ($this->gender) {
+            Gender::Male => asset('images/defaults/male.svg'),
+            Gender::Female => asset('images/defaults/female.svg'),
+            default => asset('images/defaults/unknown.svg'),
+        };
     }
 }

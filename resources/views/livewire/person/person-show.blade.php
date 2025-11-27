@@ -1,7 +1,5 @@
 <div class="pb-12">
     <x-slot name="breadcrumbs">
-        <a href="{{ route('tree.index') }}" class="hover:underline">My Trees</a>
-        <span class="mx-2">/</span>
         <a href="{{ route('tree.show', $tree) }}" class="hover:underline">{{ $tree->name }}</a>
         <span class="mx-2">/</span>
         <span class="font-semibold">{{ $person->full_name }}</span>
@@ -11,13 +9,9 @@
     <div class="bg-white dark:bg-gray-800 shadow rounded-lg p-6 mb-6 flex flex-col md:flex-row items-center md:items-start gap-6">
         {{-- Photo --}}
         <div class="flex-shrink-0">
-            @if($person->photo_path)
-                <img class="h-32 w-32 rounded-full object-cover border-4 border-gray-200 dark:border-gray-700 shadow-sm" src="{{ asset($person->photo_path) }}" alt="{{ $person->full_name }}">
-            @else
-                <div class="h-32 w-32 rounded-full bg-gray-200 dark:bg-gray-700 flex items-center justify-center text-3xl text-gray-500 dark:text-gray-400 border-4 border-gray-100 dark:border-gray-600">
-                    {{ substr($person->first_name, 0, 1) }}
-                </div>
-            @endif
+        <div class="flex-shrink-0">
+            <img class="h-32 w-32 rounded-full object-cover border-4 border-gray-200 dark:border-gray-700 shadow-sm" src="{{ $person->default_photo_url }}" alt="{{ $person->full_name }}">
+        </div>
         </div>
 
         {{-- Info --}}
@@ -25,15 +19,20 @@
             <h1 class="text-3xl font-bold text-gray-900 dark:text-white mb-2">{{ $person->full_name }}</h1>
             
             <div class="text-gray-600 dark:text-gray-400 space-y-1 mb-4">
-                <div class="flex items-center justify-center md:justify-start gap-2">
-                    <span class="inline-block w-4 h-4">
-                        @if($person->gender?->value === 'Male') ♂ @elseif($person->gender?->value === 'Female') ♀ @endif
-                    </span>
+                <div class="flex items-center">
                     <span>{{ $person->gender?->name ?? 'Unknown Gender' }}</span>
+                    @if($person->gender?->name === 'Male')
+                        <span class="text-3xl">♂</span>
+                    @elseif($person->gender?->name === 'Female')
+                        <span class="text-3xl">♀</span>
+                    @endif
                 </div>
-                <div>
+                <div class="flex items-center gap-2">
                     <span class="font-medium">Born:</span> 
                     {{ $person->birth_date?->format('M j, Y') ?? 'Unknown' }}
+                    @if($person->birth_date)
+                        <span class="text-sm">(Age {{ $person->death_date ? (int) $person->birth_date->diffInYears($person->death_date, false) : $person->birth_date->age }})</span>
+                    @endif
                 </div>
                 @if($person->death_date)
                     <div>
@@ -84,17 +83,16 @@
                 @forelse($this->parents as $p)
                     <li class="flex justify-between items-start p-2 rounded hover:bg-gray-50 dark:hover:bg-gray-700 transition group">
                         <a href="{{ route('person.show', ['tree' => $tree->id, 'person' => $p->id]) }}" class="flex items-center gap-3">
-                            <div class="w-8 h-8 rounded-full bg-gray-200 dark:bg-gray-600 flex items-center justify-center text-xs text-gray-500 dark:text-gray-300">
-                                {{ substr($p->first_name, 0, 1) }}
-                            </div>
+                            <img class="w-8 h-8 rounded-full object-cover" src="{{ $p->default_photo_url }}" alt="">
                             <div>
                                 <div class="font-medium text-gray-900 dark:text-gray-100">{{ $p->full_name }}</div>
-                                <div class="text-xs text-gray-500 dark:text-gray-400">{{ $p->birth_date?->format('Y') ?? '?' }}</div>
+                                @if($p->birth_date)
+                                    <div class="text-xs text-gray-500 dark:text-gray-400">{{ $p->birth_date->format('Y') }} (Age {{ $p->death_date ? (int) $p->birth_date->diffInYears($p->death_date, false) : $p->birth_date->age }})</div>
+                                @endif
                             </div>
                         </a>
                         <button 
-                            wire:click="removeParent({{ $p->id }})"
-                            wire:confirm="Remove this parent?"
+                            wire:click="confirmRemoveParent({{ $p->id }})"
                             class="opacity-0 group-hover:opacity-100 text-red-500 hover:text-red-700 p-1"
                             title="Remove"
                         >
@@ -121,17 +119,16 @@
                 @forelse($this->spouses as $s)
                     <li class="flex justify-between items-start p-2 rounded hover:bg-gray-50 dark:hover:bg-gray-700 transition group">
                         <a href="{{ route('person.show', ['tree' => $tree->id, 'person' => $s->id]) }}" class="flex items-center gap-3">
-                            <div class="w-8 h-8 rounded-full bg-gray-200 dark:bg-gray-600 flex items-center justify-center text-xs text-gray-500 dark:text-gray-300">
-                                {{ substr($s->first_name, 0, 1) }}
-                            </div>
+                            <img class="w-8 h-8 rounded-full object-cover" src="{{ $s->default_photo_url }}" alt="">
                             <div>
                                 <div class="font-medium text-gray-900 dark:text-gray-100">{{ $s->full_name }}</div>
-                                <div class="text-xs text-gray-500 dark:text-gray-400">{{ $s->birth_date?->format('Y') ?? '?' }}</div>
+                                @if($s->birth_date)
+                                    <div class="text-xs text-gray-500 dark:text-gray-400">{{ $s->birth_date->format('Y') }} (Age {{ $s->death_date ? (int) $s->birth_date->diffInYears($s->death_date, false) : $s->birth_date->age }})</div>
+                                @endif
                             </div>
                         </a>
                         <button 
-                            wire:click="removeSpouse({{ $s->id }})"
-                            wire:confirm="Remove this spouse?"
+                            wire:click="confirmRemoveSpouse({{ $s->id }})"
                             class="opacity-0 group-hover:opacity-100 text-red-500 hover:text-red-700 p-1"
                             title="Remove"
                         >
@@ -158,17 +155,16 @@
                 @forelse($this->children as $c)
                     <li class="flex justify-between items-start p-2 rounded hover:bg-gray-50 dark:hover:bg-gray-700 transition group">
                         <a href="{{ route('person.show', ['tree' => $tree->id, 'person' => $c->id]) }}" class="flex items-center gap-3">
-                            <div class="w-8 h-8 rounded-full bg-gray-200 dark:bg-gray-600 flex items-center justify-center text-xs text-gray-500 dark:text-gray-300">
-                                {{ substr($c->first_name, 0, 1) }}
-                            </div>
+                            <img class="w-8 h-8 rounded-full object-cover" src="{{ $c->default_photo_url }}" alt="">
                             <div>
                                 <div class="font-medium text-gray-900 dark:text-gray-100">{{ $c->full_name }}</div>
-                                <div class="text-xs text-gray-500 dark:text-gray-400">{{ $c->birth_date?->format('Y') ?? '?' }}</div>
+                                @if($c->birth_date)
+                                    <div class="text-xs text-gray-500 dark:text-gray-400">{{ $c->birth_date->format('Y') }} (Age {{ $c->death_date ? (int) $c->birth_date->diffInYears($c->death_date, false) : $c->birth_date->age }})</div>
+                                @endif
                             </div>
                         </a>
                         <button 
-                            wire:click="removeChild({{ $c->id }})"
-                            wire:confirm="Remove this child?"
+                            wire:click="confirmRemoveChild({{ $c->id }})"
                             class="opacity-0 group-hover:opacity-100 text-red-500 hover:text-red-700 p-1"
                             title="Remove"
                         >
@@ -192,7 +188,7 @@
                         <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
                     </button>
                 </div>
-                <livewire:person.actions.add-spouse-form :person="$person" />
+                <livewire:person.actions.add-spouse-form :person="$person" :familyTree="$tree" />
             </div>
         </div>
     @endif
@@ -206,32 +202,48 @@
                         <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
                     </button>
                 </div>
-                <livewire:person.actions.add-parent-form :person="$person" />
+                <livewire:person.actions.add-parent-form :person="$person" :familyTree="$tree" />
             </div>
         </div>
     @endif
 
     @if($showAddChild)
+        <div class="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4 transition-opacity">
+            <div class="bg-white dark:bg-gray-800 w-full max-w-lg rounded-xl shadow-2xl p-6 max-h-[90vh] overflow-y-auto transform transition-all scale-100">
+                <div class="flex justify-between items-center mb-6">
+                    <h2 class="text-xl font-bold text-gray-900 dark:text-white">Add Child</h2>
+                    <button wire:click="closeAddChild" class="text-gray-400 hover:text-gray-600 dark:hover:text-gray-200">
+                        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
+                    </button>
+                </div>
+                <livewire:person.actions.add-child-form :person="$person" :familyTree="$tree" />
+            </div>
+        </div>
     @endif
 
     {{-- Modal (Edit Person) --}}
     @if($showEditPerson)
-        <div class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-
-            <div class="bg-white w-full max-w-lg rounded shadow-lg p-4 max-h-[90vh] overflow-y-auto">
-
-                <div class="flex justify-between items-center mb-4">
-                    <h2 class="text-xl font-bold">Edit Person</h2>
-                    <button wire:click="closeEditPerson" class="text-gray-500 hover:text-black">✕</button>
+        <div class="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4 transition-opacity">
+            <div class="bg-white dark:bg-gray-800 w-full max-w-2xl rounded-xl shadow-2xl p-6 max-h-[90vh] overflow-y-auto transform transition-all scale-100">
+                <div class="flex justify-between items-center mb-6">
+                    <h2 class="text-xl font-bold text-gray-900 dark:text-white">Edit Profile</h2>
+                    <button wire:click="closeEditPerson" class="text-gray-400 hover:text-gray-600 dark:hover:text-gray-200">
+                        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
+                    </button>
                 </div>
-
-                <livewire:person.actions.edit-person-form 
-                    :person="$person"
-                />
-
+                <livewire:person.actions.edit-person-form :person="$person" />
             </div>
-
         </div>
     @endif
+
+
+
+    <x-modal.delete-confirmation 
+        :show="$showDeleteConfirmation" 
+        title="Remove Relationship?" 
+        message="Are you sure you want to remove this relationship? This will not delete the person, only the link between them."
+        onConfirm="executeDelete"
+        onCancel="cancelDelete"
+    />
 
 </div>
