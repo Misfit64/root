@@ -25,6 +25,7 @@ class AddPersonToTreeForm extends Component
     public function mount(FamilyTree $tree)
     {
         $this->tree = $tree;
+        $this->gender = Gender::Unknown->value;
     }
 
     public function save()
@@ -42,7 +43,7 @@ class AddPersonToTreeForm extends Component
             'family_tree_id' => $this->tree->id,
             'first_name' => $this->first_name,
             'last_name' => $this->last_name,
-            'gender' => $this->gender,
+            'gender' => $this->gender ?? Gender::Unknown->value,
             'birth_date' => $this->birth_date,
             'notes' => $this->notes,
         ];
@@ -54,7 +55,8 @@ class AddPersonToTreeForm extends Component
 
         Person::create($personData);
 
-        $this->reset(['first_name', 'last_name', 'gender', 'birth_date', 'notes', 'photo']);
+        $this->reset(['first_name', 'last_name', 'birth_date', 'notes', 'photo']);
+        $this->gender = Gender::Unknown->value;
         
         $this->dispatch('person-added');
     }

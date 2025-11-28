@@ -45,4 +45,11 @@ class User extends Authenticatable
             'password' => 'hashed',
         ];
     }
+
+    public function sharedTrees()
+    {
+        return $this->belongsToMany(FamilyTree::class, 'tree_members')
+            ->withPivot('role')
+            ->withTimestamps();
+    }
 }

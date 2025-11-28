@@ -8,4 +8,6 @@ enum RelationshipSubType: int
     case Adoptive = 2;
     case Step = 3;
     case Unknown = 4;
+    case Married = 5;
+    case Separated = 6;
 }

@@ -51,6 +51,7 @@
 
         {{-- Actions --}}
         <div class="flex flex-col gap-2 w-full md:w-auto">
+            @can('update', $person)
             <button wire:click="openEditPerson" class="flex items-center justify-center gap-2 px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 transition">
                 <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"></path></svg>
                 Edit Profile
@@ -59,6 +60,7 @@
                 <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4"></path></svg>
                 Merge Duplicate
             </a>
+            @endcan
             <a href="{{ route('tree.graph', ['tree' => $tree->id, 'person' => $person->id]) }}" class="flex items-center justify-center gap-2 px-4 py-2 border border-gray-300 dark:border-gray-600 rounded hover:bg-gray-50 dark:hover:bg-gray-700 transition">
                 <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 12l3-3 3 3 4-4M8 21l4-4 4 4M3 4h18M4 4h16v12a1 1 0 01-1 1H5a1 1 0 01-1-1V4z"></path></svg>
                 View Tree
@@ -76,7 +78,9 @@
                     <svg class="w-5 h-5 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"></path></svg>
                     Parents
                 </h2>
+                @can('update', $person)
                 <button wire:click="openAddParent" class="text-sm text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300 font-medium">+ Add</button>
+                @endcan
             </div>
             
             <ul class="space-y-3 flex-grow">
@@ -91,6 +95,7 @@
                                 @endif
                             </div>
                         </a>
+                        @can('update', $person)
                         <button 
                             wire:click="confirmRemoveParent({{ $p->id }})"
                             class="opacity-0 group-hover:opacity-100 text-red-500 hover:text-red-700 p-1"
@@ -98,6 +103,7 @@
                         >
                             <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
                         </button>
+                        @endcan
                     </li>
                 @empty
                     <li class="text-gray-400 text-sm italic text-center py-4">No parents added.</li>
@@ -112,7 +118,9 @@
                     <svg class="w-5 h-5 text-pink-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z"></path></svg>
                     Spouses
                 </h2>
+                @can('update', $person)
                 <button wire:click="openAddSpouse" class="text-sm text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300 font-medium">+ Add</button>
+                @endcan
             </div>
 
             <ul class="space-y-3 flex-grow">
@@ -127,6 +135,7 @@
                                 @endif
                             </div>
                         </a>
+                        @can('update', $person)
                         <button 
                             wire:click="confirmRemoveSpouse({{ $s->id }})"
                             class="opacity-0 group-hover:opacity-100 text-red-500 hover:text-red-700 p-1"
@@ -134,6 +143,7 @@
                         >
                             <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
                         </button>
+                        @endcan
                     </li>
                 @empty
                     <li class="text-gray-400 text-sm italic text-center py-4">No spouses added.</li>
@@ -148,7 +158,9 @@
                     <svg class="w-5 h-5 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14 10h4.764a2 2 0 011.789 2.894l-3.5 7A2 2 0 0115.263 21h-4.017c-.163 0-.326-.02-.485-.06L7 20m7-10V5a2 2 0 00-2-2h-.095c-.5 0-.905.405-.905.905 0 .714-.211 1.412-.608 2.006L7 11v9m7-10h-2M7 20H5a2 2 0 01-2-2v-6a2 2 0 012-2h2.5"></path></svg>
                     Children
                 </h2>
+                @can('update', $person)
                 <button wire:click="openAddChild" class="text-sm text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300 font-medium">+ Add</button>
+                @endcan
             </div>
 
             <ul class="space-y-3 flex-grow">
@@ -163,6 +175,7 @@
                                 @endif
                             </div>
                         </a>
+                        @can('update', $person)
                         <button 
                             wire:click="confirmRemoveChild({{ $c->id }})"
                             class="opacity-0 group-hover:opacity-100 text-red-500 hover:text-red-700 p-1"
@@ -170,6 +183,7 @@
                         >
                             <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
                         </button>
+                        @endcan
                     </li>
                 @empty
                     <li class="text-gray-400 text-sm italic text-center py-4">No children added.</li>

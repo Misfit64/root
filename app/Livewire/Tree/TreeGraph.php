@@ -9,6 +9,7 @@ use App\Models\Person;
 use App\Services\TreeTraversal\TreeTraversalStrategy;
 use App\Services\TreeTraversal\BfsTraversal;
 use App\Services\TreeTraversal\DfsTraversal;
+use App\Enums\Gender;
 
 #[Layout('components.layouts.visualizer')]
 class TreeGraph extends Component
@@ -29,11 +30,9 @@ class TreeGraph extends Component
         $this->rootPerson = Person::findOrFail($person);
         $this->originalRootId = $this->rootPerson->id;
         
-        if ($this->tree->user_id !== auth()->id() && !$this->tree->is_public) {
-            abort(403);
-        }
+        $this->authorize('view', $this->tree);
 
-        if ($this->tree->is_public) {
+        if ($this->tree->is_public || request()->query('whole_tree')) {
             $this->isWholeTree = true;
         }
     }
@@ -66,7 +65,7 @@ class TreeGraph extends Component
 
         while ($current->parents->count() > 0) {
             // Prefer father (gender 1)
-            $father = $current->parents->firstWhere('gender', \App\Enums\Gender::Male);
+            $father = $current->parents->firstWhere('gender', Gender::Male);
             $next = $father ?? $current->parents->first();
             
             if (in_array($next->id, $visited)) break; // Prevent cycles
@@ -304,6 +303,13 @@ class TreeGraph extends Component
             unset($this->visitedIds[$key]);
         }
 
+        // Also allow root's spouses to be processed again (as they are attached to the root in the main view)
+        foreach ($this->rootPerson->spouses as $spouse) {
+            if (($key = array_search($spouse->id, $this->visitedIds)) !== false) {
+                unset($this->visitedIds[$key]);
+            }
+        }
+
         return [
             'ancestors' => $ancestors,
             'descendants' => $this->buildDescendants($this->rootPerson, 0, 10),
@@ -311,7 +317,7 @@ class TreeGraph extends Component
         ];
     }
 
-    private function formatNode($person, $depth = 0)
+    private function formatNode($person, $depth = 0, $excludeSpouseId = null, $isMainTreeNode = false)
     {
         // Record absolute depth of this node
         // Note: For secondary trees, this depth is relative to their root.
@@ -324,15 +330,72 @@ class TreeGraph extends Component
             'gender' => $person->gender?->value,
             'photo' => $person->default_photo_url,
             'birth_date' => $person->birth_date?->timestamp,
-            'spouses' => $person->spouses->map(function($s) {
-                $this->visitedIds[] = $s->id;
-                return [
-                    'name' => $s->full_name,
-                    'id' => $s->id,
-                    'gender' => $s->gender?->value,
-                    'photo' => $s->default_photo_url,
-                ];
-            })->toArray(),
+            'spouses' => $person->spouses
+                ->filter(function($s) use ($excludeSpouseId) {
+                    if ($s->id === $excludeSpouseId) return false;
+                    // Prevent duplicates: if spouse is already visited (e.g. as a sibling/child), don't render as spouse node.
+                    // This avoids the same person appearing twice in the graph.
+                    if (in_array($s->id, $this->visitedIds)) return false;
+                    return true;
+                })
+                ->map(function($s) use ($person, $isMainTreeNode) {
+                    $this->visitedIds[] = $s->id;
+                    // Recursively format spouse. 
+                    // Spouses are NOT main tree nodes (they are attached to one).
+                    $spouseData = $this->formatNode($s, 0, $person->id, false);
+                    
+                    // Add relationship subtype from pivot
+                    $spouseData['relationship_subtype'] = $s->pivot->relationship_subtype ?? null;
+                    
+                    // Add children of the spouse
+                    // Logic:
+                    // 1. Exclude children already in the main tree (visitedIds).
+                    // 2. Exclude children whose OTHER parent is a spouse of this spouse ($s), 
+                    //    UNLESS the other parent is the current person ($person).
+                    
+                    // Eager load parents to ensure we can check them
+                    $s->children->load('parents');
+                    
+                    $spouseData['children'] = $s->children
+                        ->filter(function($child) use ($s, $person, $isMainTreeNode) {
+                            // 1. Exclude visited (main tree)
+                            if (in_array($child->id, $this->visitedIds)) return false;
+                            
+                            // 2. Check other parent
+                            // Find parent that is NOT $s
+                            $otherParent = $child->parents->first(fn($p) => $p->id !== $s->id);
+                            
+                            if ($otherParent) {
+                                // If other parent is the current person ($person):
+                                if ($otherParent->id === $person->id) {
+                                    // If $person is a Main Tree Node, then this child is (or will be) in the main tree.
+                                    // So we EXCLUDE it to avoid duplication.
+                                    if ($isMainTreeNode) return false;
+                                    
+                                    // If $person is NOT a Main Tree Node (e.g. he is a spouse in a chain),
+                                    // then this child is NOT in the main tree. So we KEEP it.
+                                    return true;
+                                }
+                                
+                                // If other parent is one of $s's spouses, we EXCLUDE it (defer to that spouse).
+                                if ($s->spouses->pluck('id')->contains($otherParent->id)) return false;
+                            }
+                            
+                            return true;
+                        })
+                        ->map(function($child) {
+                            return [
+                                'name' => $child->full_name,
+                                'id' => $child->id,
+                                'gender' => $child->gender?->value,
+                                'photo' => $child->default_photo_url,
+                                'birth_date' => $child->birth_date?->timestamp,
+                                'is_child_of_spouse' => true, 
+                            ];
+                        })->values()->toArray();
+                        
+                    return $spouseData;
+                })->values()->toArray(),
         ];
     }
 
@@ -343,7 +406,7 @@ class TreeGraph extends Component
             $depth,
             $maxDepth,
             $this->visitedIds,
-            fn($p, $d) => $this->formatNode($p, $d)
+            fn($p, $d) => $this->formatNode($p, $d, null, true)
         );
     }
 
@@ -354,7 +417,7 @@ class TreeGraph extends Component
             $depth,
             $maxDepth,
             $this->visitedIds,
-            fn($p, $d) => $this->formatNode($p, $d),
+            fn($p, $d) => $this->formatNode($p, $d, null, true),
             $onVisitedChild
         );
     }

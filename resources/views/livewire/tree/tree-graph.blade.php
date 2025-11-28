@@ -14,11 +14,9 @@
                         Loading...
                     </span>
                 </button>
-                @auth
                 <a href="{{ route('person.show', ['tree' => $tree->id, 'person' => $rootPerson->id]) }}" class="px-4 py-2 border border-gray-300 dark:border-gray-600 rounded text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700 transition">
                     Back to Profile
                 </a>
-                @endauth
             </div>
         </div>
     </div>
@@ -40,7 +38,7 @@
                 const container = document.getElementById('tree-container');
                 const width = container.clientWidth;
                 const height = container.clientHeight;
-                const spouseOffset = 100;
+                const spouseOffset = 160;
 
                 // Clear previous SVG if any
                 d3.select('#tree-container').selectAll('svg').remove();
@@ -53,37 +51,182 @@
                 const g = svg.append('g')
                     .attr('transform', `translate(${width / 2}, ${height / 2})`);
 
-                const zoom = d3.zoom().on('zoom', (event) => {
+                const zoom = d3.zoom()
+                    .scaleExtent([0.05, 2])
+                    .on('zoom', (event) => {
                     g.attr('transform', event.transform);
                 });
                 
                 const svgSelection = d3.select('#tree-container svg');
                 svgSelection.call(zoom);
 
+                // Helper to calculate total width of a spouse chain recursively
+                const calculateSpouseChainWidth = (nodeData) => {
+                    if (!nodeData.spouses || nodeData.spouses.length === 0) return 0;
+                    
+                    let currentOffset = 0;
+                    let prevRightEdge = 0; // Track right edge of previous spouse/children
+
+                    const traverse = (spouses) => {
+                        let chainWidth = 0;
+                        // For width calculation, we simulate the layout
+                        let localOffset = 0;
+                        let localPrevRightEdge = 0;
+                        
+                        spouses.forEach(spouse => {
+                            let thisChildHalfWidth = 0;
+                            if (spouse.children && spouse.children.length > 0) {
+                                const childGap = 150;
+                                const childrenWidth = (spouse.children.length - 1) * childGap;
+                                thisChildHalfWidth = (childrenWidth / 2) + 40;
+                            }
+
+                            // Standard step based on children width
+                            const padding = 20;
+                            // Distance from previous spouse center to this spouse center
+                            // We don't have prevChildHalfWidth easily available here without tracking
+                            // But we can track right edge.
+                            
+                            // Let's use the same logic as renderRecursive
+                            // We need to determine where this spouse is placed (localOffset)
+                            
+                            // 1. Gap from previous spouse
+                            // We assume previous spouse is at `localOffset - step`? No.
+                            // We track `localOffset` as the position of the CURRENT spouse.
+                            
+                            // Initial step for first spouse
+                            let step = 160;
+                            if (localOffset === 0) {
+                                // First spouse.
+                                // Gap from Parent (0) to Spouse.
+                                // Parent has no children width in this context (it's the node).
+                                // But we need to accommodate Spouse's children.
+                                step = Math.max(160, thisChildHalfWidth + 40);
+                            } else {
+                                // Subsequent spouse.
+                                // Gap from Prev Spouse to Curr Spouse.
+                                // Need to clear Prev Spouse's children + Curr Spouse's children.
+                                // We can use localPrevRightEdge.
+                                // Gap = (localOffset - prevPos)
+                                // We need localOffset > localPrevRightEdge + thisChildHalfWidth + padding.
+                                // But simpler: step = max(160, ...)
+                                // Let's simplify: just use the midpoint constraint which dominates.
+                            }
+
+                            // Midpoint Constraint:
+                            // Child is at (0 + localOffset) / 2.
+                            // We need Child > localPrevRightEdge.
+                            // localOffset > 2 * localPrevRightEdge.
+                            
+                            let pos = localOffset + 160; // Min step
+                            if (localOffset > 0) {
+                                // Ensure gap from previous
+                                pos = Math.max(pos, localPrevRightEdge + thisChildHalfWidth + padding + 40);
+                            }
+                            
+                            // Apply Midpoint Constraint
+                            pos = Math.max(pos, 2 * localPrevRightEdge);
+                            
+                            // Update localOffset
+                            localOffset = pos;
+                            
+                            // Calculate this spouse's right edge
+                            let myRightEdge = localOffset + thisChildHalfWidth;
+                            
+                            // Add nested spouses width
+                            if (spouse.spouses && spouse.spouses.length > 0) {
+                                const nestedWidth = traverse(spouse.spouses);
+                                // Nested spouses extend to the right
+                                myRightEdge = Math.max(myRightEdge, localOffset + nestedWidth);
+                            }
+                            
+                            localPrevRightEdge = myRightEdge;
+                        });
+                        
+                        return localPrevRightEdge;
+                    };
+
+                    return traverse(nodeData.spouses);
+                };
+
                 const treeLayout = d3.tree()
-                    .nodeSize([130, 150])
+                    .nodeSize([130, 200])
                     .separation((a, b) => {
-                        let sep = 1;
-                        if (a.data.spouses && a.data.spouses.length > 0) {
-                            sep = 1.8;
+                        const aWidth = calculateSpouseChainWidth(a.data);
+                        const bWidth = calculateSpouseChainWidth(b.data);
+                        const widthFactor = (aWidth + bWidth) / 130;
+                        let sep = 1.2;
+                        if (widthFactor > 0) {
+                            sep += widthFactor * 0.8;
                         }
                         return (a.parent == b.parent ? 1 : 1.2) * sep;
                     });
+
+
+
+
 
                 // --- Descendants (Downwards) ---
                 const rootDesc = d3.hierarchy(data.descendants);
                 treeLayout(rootDesc);
 
+                const getSpouseCenterShift = (nodeData) => {
+                    if (!nodeData.spouses || nodeData.spouses.length === 0) return 0;
+                    
+                    let currentOffset = 0;
+                    let prevRightEdge = 0;
+                    let totalPos = 0;
+                    let count = 0;
+
+                    nodeData.spouses.forEach(spouse => {
+                        let thisChildHalfWidth = 0;
+                        if (spouse.children && spouse.children.length > 0) {
+                            const childGap = 150;
+                            const childrenWidth = (spouse.children.length - 1) * childGap;
+                            thisChildHalfWidth = (childrenWidth / 2) + 40;
+                        }
+
+                        const padding = 20;
+                        let pos = currentOffset + 160; 
+                        
+                        if (currentOffset > 0) {
+                             pos = Math.max(pos, prevRightEdge + thisChildHalfWidth + padding);
+                        } else {
+                            pos = Math.max(pos, thisChildHalfWidth + 40);
+                        }
+
+                        pos = Math.max(pos, 2 * prevRightEdge);
+
+                        currentOffset = pos;
+                        totalPos += pos;
+                        count++;
+                        
+                        let myRightEdge = pos + thisChildHalfWidth;
+                        if (spouse.spouses && spouse.spouses.length > 0) {
+                             const nestedWidth = calculateSpouseChainWidth(spouse);
+                             myRightEdge = Math.max(myRightEdge, pos + nestedWidth);
+                        }
+                        
+                        prevRightEdge = myRightEdge;
+                    });
+                    
+                    if (count === 0) return 0;
+                    return (totalPos / count) / 2;
+                };
+
                 const fixPositions = (node, shift = 0, yShift = 0) => {
                     node.x += shift;
-                    
-
                     node.y += yShift;
                     
                     let nextShift = shift;
-                    if (node.data.spouses && node.data.spouses.length > 0) {
-                        nextShift += spouseOffset / 2;
+                    
+                    // Use the new center shift calculation
+                    const centerShift = getSpouseCenterShift(node.data);
+                    
+                    if (centerShift > 0) {
+                        nextShift += centerShift;
                     }
+                    
                     if (node.children) {
                         node.children.forEach(child => fixPositions(child, nextShift, yShift));
                     }
@@ -132,8 +275,9 @@
                 const positions = [];
                 
                 currentGeneration.forEach((item, index) => {
-                    const hasSpouse = item.data.spouses && item.data.spouses.length > 0;
-                    const width = hasSpouse ? (nodeWidth + spouseOffset) : nodeWidth;
+                    // Use the new width calculation
+                    const chainWidth = calculateSpouseChainWidth(item.data);
+                    const width = nodeWidth + chainWidth;
                     
                     positions.push({
                         item: item,
@@ -168,9 +312,30 @@
                     }
                 });
 
-                const allNodes = [...descendantsNodes, ...ancestorsNodes, ...siblingNodes];
+                // Identify children handled by spouses to exclude from D3 rendering
+                const spouseChildrenIds = new Set();
+                const collectSpouseChildren = (node) => {
+                    if (node.spouses) {
+                        node.spouses.forEach(spouse => {
+                            if (spouse.children) {
+                                spouse.children.forEach(child => spouseChildrenIds.add(String(child.id)));
+                            }
+                            collectSpouseChildren(spouse);
+                        });
+                    }
+                    if (node.children) {
+                        node.children.forEach(collectSpouseChildren);
+                    }
+                };
+                collectSpouseChildren(data.descendants);
 
+                // Filter descendantsNodes and links
                 const descendantsLinks = rootDesc.links();
+                const filteredDescendantsNodes = descendantsNodes.filter(d => !spouseChildrenIds.has(String(d.data.id)));
+                const filteredDescendantsLinks = descendantsLinks.filter(d => !spouseChildrenIds.has(String(d.target.data.id)));
+
+                const allNodes = [...filteredDescendantsNodes, ...ancestorsNodes, ...siblingNodes];
+
                 const ancestorsLinks = rootAnc ? rootAnc.links() : [];
                 
                 const linkGenerator = (d, direction) => {
@@ -181,12 +346,17 @@
 
                     if (direction === 'descendant') {
                         if (d.source.data.spouses && d.source.data.spouses.length > 0) {
-                            sourceX += spouseOffset / 2;
+                            // Start link from center of family group (Parents only)
+                            // We use getSpouseCenterShift to match the children centering logic
+                            const centerShift = getSpouseCenterShift(d.source.data);
+                            sourceX += centerShift;
                         }
                     }
                     else if (direction === 'ancestor') {
                         if (d.target.data.spouses && d.target.data.spouses.length > 0) {
-                            targetX += spouseOffset / 2;
+                             // End link at center of family group
+                            const chainWidth = calculateSpouseChainWidth(d.target.data);
+                            targetX += chainWidth / 2;
                         }
                     }
 
@@ -197,7 +367,7 @@
                 };
 
                 g.selectAll('.link-desc')
-                    .data(descendantsLinks)
+                    .data(filteredDescendantsLinks)
                     .enter().append('path')
                     .attr('class', 'link-desc')
                     .attr('d', d => linkGenerator(d, 'descendant'))
@@ -250,9 +420,10 @@
                              let sourceX = d.source.x;
                              // Start from between parents if spouses exist
                              if (d.source.data.spouses && d.source.data.spouses.length > 0) {
-                                 sourceX += spouseOffset / 2;
+                                 sourceX += (spouseOffset * d.source.data.spouses.length) / 2;
                              } else if (d.sourceIsSpouse) {
-                                 sourceX += spouseOffset;
+                                 // Approximate logic for sourceIsSpouse - might need refinement if multiple spouses
+                                 sourceX += spouseOffset; 
                              }
                              
                              const sourceY = d.source.y;
@@ -292,12 +463,12 @@
                             
                              let finalTargetX = targetX;
                              if (d.target.data.spouses && d.target.data.spouses.length > 0) {
-                                 finalTargetX += spouseOffset / 2;
+                                 finalTargetX += (spouseOffset * d.target.data.spouses.length) / 2;
                              }
                              
                              let finalSourceX = sourceX;
                              if (d.source.data.spouses && d.source.data.spouses.length > 0) {
-                                 finalSourceX += spouseOffset / 2;
+                                 finalSourceX += (spouseOffset * d.source.data.spouses.length) / 2;
                              }
 
                             return "M" + finalSourceX + "," + sourceY
@@ -361,46 +532,124 @@
 
                 nodeGroup.each(function(d) {
                     if (d.data.spouses && d.data.spouses.length > 0) {
-                        const spouseGroup = d3.select(this).append('g')
-                            .attr('transform', `translate(${spouseOffset}, 0)`);
+                        const renderRecursive = (spouses, parentSelection, parentX, depth = 0) => {
+                            let currentOffset = 0; // Local offset for this level
+                            let prevRightEdge = 0; // Track right edge of previous element in this group
 
-                        d3.select(this).append('line')
-                            .attr('x1', 25)
-                            .attr('y1', 0)
-                            .attr('x2', spouseOffset - 25)
-                            .attr('y2', 0)
-                            .attr('stroke', '#ef4444')
-                            .attr('stroke-width', 2);
+                            spouses.forEach((spouse) => {
+                                let thisChildHalfWidth = 0;
+                                if (spouse.children && spouse.children.length > 0) {
+                                    const childGap = 150;
+                                    const childrenWidth = (spouse.children.length - 1) * childGap;
+                                    thisChildHalfWidth = (childrenWidth / 2) + 40;
+                                }
 
-                        spouseGroup.append('circle')
-                            .attr('r', 25)
-                            .attr('fill', '#fff')
-                            .attr('stroke', d.data.spouses[0].gender === 1 ? '#3b82f6' : (d.data.spouses[0].gender === 2 ? '#ec4899' : '#9ca3af'))
-                            .attr('stroke-width', 2);
+                                const padding = 20;
+                                
+                                // Calculate Position
+                                // Min distance from Parent (0) or Previous Spouse
+                                let pos = currentOffset + 160; 
+                                
+                                if (currentOffset > 0) {
+                                     // Ensure gap from previous spouse
+                                     // We need pos > prevRightEdge + thisChildHalfWidth + padding
+                                     pos = Math.max(pos, prevRightEdge + thisChildHalfWidth + padding);
+                                } else {
+                                    // First spouse
+                                    // Ensure we clear Parent (0) + Spouse Children
+                                    pos = Math.max(pos, thisChildHalfWidth + 40);
+                                }
 
-                        spouseGroup.append('clipPath')
-                            .attr('id', `clip-spouse-${d.data.spouses[0].id}`)
-                            .append('circle')
-                            .attr('r', 25);
+                                // Midpoint Constraint:
+                                // Child is at (0 + pos) / 2.
+                                // We need Child > prevRightEdge.
+                                // pos > 2 * prevRightEdge.
+                                pos = Math.max(pos, 2 * prevRightEdge);
 
-                        spouseGroup.append('image')
-                            .attr('xlink:href', d.data.spouses[0].photo)
-                            .attr('x', -25)
-                            .attr('y', -25)
-                            .attr('width', 50)
-                            .attr('height', 50)
-                            .attr('clip-path', `url(#clip-spouse-${d.data.spouses[0].id})`)
-                            .attr('preserveAspectRatio', 'xMidYMid slice')
-                            .on('click', (event) => {
-                                event.stopPropagation();
-                                window.location.href = `/trees/{{ $tree->id }}/person/${d.data.spouses[0].id}`;
+                                currentOffset = pos;
+                                const myOffset = currentOffset;
+                                
+                                console.log(`Rendering ${spouse.name}: ParentX=${parentX}, MyOffset=${myOffset}, PrevRight=${prevRightEdge}`);
+
+                                // Line styling
+                                let strokeColor = '#ef4444'; 
+                                let strokeDash = 'none';
+                                let strokeWidth = 2;
+
+                                if (depth > 0) {
+                                    strokeColor = '#ef4444';
+                                    strokeDash = '2,2';
+                                } else {
+                                    if (spouse.relationship_subtype === 6) { 
+                                        strokeDash = '5,5';
+                                    }
+                                }
+
+                                // Append Line FIRST (so it's behind the node)
+                                parentSelection.append('line')
+                                    .attr('x1', parentX + 25) // parentX is 0 in local context
+                                    .attr('y1', 0)
+                                    .attr('x2', myOffset - 25)
+                                    .attr('y2', 0)
+                                    .attr('stroke', strokeColor)
+                                    .attr('stroke-width', strokeWidth)
+                                    .attr('stroke-dasharray', strokeDash);
+
+                                // Append Spouse Group SECOND
+                                const spouseGroup = parentSelection.append('g')
+                                    .attr('transform', `translate(${myOffset}, 0)`);
+                                    
+                                spouseGroup.append('circle').attr('r', 25).attr('fill', '#fff').attr('stroke', spouse.gender === 1 ? '#3b82f6' : (spouse.gender === 2 ? '#ec4899' : '#9ca3af')).attr('stroke-width', 2);
+                                spouseGroup.append('clipPath').attr('id', `clip-spouse-${spouse.id}`).append('circle').attr('r', 25);
+                                spouseGroup.append('image').attr('xlink:href', spouse.photo).attr('x', -25).attr('y', -25).attr('width', 50).attr('height', 50).attr('clip-path', `url(#clip-spouse-${spouse.id})`).attr('preserveAspectRatio', 'xMidYMid slice').on('click', (e) => { e.stopPropagation(); window.location.href = `/trees/{{ $tree->id }}/person/${spouse.id}`; });
+                                spouseGroup.append('text').attr('dy', 45).attr('text-anchor', 'middle').text(spouse.name).attr('class', 'text-xs font-bold fill-gray-700 dark:fill-gray-300');
+
+                                // Render Children
+                                let myRightEdge = myOffset + thisChildHalfWidth;
+                                
+                                if (spouse.children && spouse.children.length > 0) {
+                                    const midX = (parentX - myOffset) / 2; // parentX is 0
+                                    const childGap = 150;
+                                    const childrenWidth = (spouse.children.length - 1) * childGap;
+                                    const startX = midX - (childrenWidth / 2);
+                                    
+                                    spouse.children.forEach((child, i) => {
+                                        const childX = startX + (i * childGap);
+                                        const childY = 150;
+                                        
+                                        // Append Link FIRST (so it's behind the child node)
+                                        spouseGroup.append('path')
+                                            .attr('d', `M${midX},0 C${midX},${childY/2} ${childX},${childY/2} ${childX},${childY}`)
+                                            .attr('fill', 'none')
+                                            .attr('stroke', '#9ca3af')
+                                            .attr('stroke-width', 2)
+                                            .attr('stroke-dasharray', strokeDash);
+
+                                        // Append Child Group SECOND
+                                        const childGroup = spouseGroup.append('g').attr('transform', `translate(${childX}, ${childY})`);
+                                        
+                                        childGroup.append('circle').attr('r', 25).attr('fill', '#fff').attr('stroke', child.gender === 1 ? '#3b82f6' : (child.gender === 2 ? '#ec4899' : '#9ca3af')).attr('stroke-width', 2);
+                                        childGroup.append('clipPath').attr('id', `clip-child-${child.id}`).append('circle').attr('r', 25);
+                                        childGroup.append('image').attr('xlink:href', child.photo).attr('x', -25).attr('y', -25).attr('width', 50).attr('height', 50).attr('clip-path', `url(#clip-child-${child.id})`).attr('preserveAspectRatio', 'xMidYMid slice').on('click', (e) => { e.stopPropagation(); window.location.href = `/trees/{{ $tree->id }}/person/${child.id}`; });
+                                        childGroup.append('text').attr('dy', 45).attr('text-anchor', 'middle').text(child.name).attr('class', 'text-xs font-bold fill-gray-900 dark:fill-gray-100');
+                                    });
+                                }
+
+                                // Render Nested Spouses
+                                if (spouse.spouses && spouse.spouses.length > 0) {
+                                    // Pass spouseGroup as parentSelection for nested spouses
+                                    renderRecursive(spouse.spouses, spouseGroup, 0, depth + 1);
+                                    
+                                    // We need to know the width of the nested spouses to update myRightEdge
+                                    const nestedWidth = calculateSpouseChainWidth(spouse);
+                                    myRightEdge = Math.max(myRightEdge, myOffset + nestedWidth);
+                                }
+                                
+                                prevRightEdge = myRightEdge;
                             });
-
-                        spouseGroup.append('text')
-                            .attr('dy', 45)
-                            .attr('text-anchor', 'middle')
-                            .text(d.data.spouses[0].name)
-                            .attr('class', 'text-xs font-medium fill-gray-700 dark:fill-gray-300');
+                        };
+                        
+                        renderRecursive(d.data.spouses, d3.select(this), 0);
                     }
                 });
 
@@ -437,7 +686,7 @@
                     
                     if (width === 0 || height === 0) return;
                     
-                    const scale = 0.7 / Math.max(width / fullWidth, height / fullHeight);
+                    const scale = Math.min(1, 0.7 / Math.max(width / fullWidth, height / fullHeight));
                     
                     let translate;
                     
@@ -458,6 +707,8 @@
                         .duration(750)
                         .call(zoom.transform, d3.zoomIdentity.translate(translate[0], translate[1]).scale(scale));
                 };
+
+
 
                 setTimeout(resetZoom, 100);
                 

@@ -1,59 +1,76 @@
-<p align="center"><a href="https://laravel.com" target="_blank"><img src="https://raw.githubusercontent.com/laravel/art/master/logo-lockup/5%20SVG/2%20CMYK/1%20Full%20Color/laravel-logolockup-cmyk-red.svg" width="400" alt="Laravel Logo"></a></p>
+# FamilyTree
 
-<p align="center">
-<a href="https://github.com/laravel/framework/actions"><img src="https://github.com/laravel/framework/workflows/tests/badge.svg" alt="Build Status"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/dt/laravel/framework" alt="Total Downloads"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/v/laravel/framework" alt="Latest Stable Version"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/l/laravel/framework" alt="License"></a>
-</p>
+FamilyTree is a modern, interactive web application designed to help you visualize and manage your family history. Built with Laravel and Livewire, it offers a seamless experience for creating and exploring family connections.
 
-## About Laravel
+## Features
 
-Laravel is a web application framework with expressive, elegant syntax. We believe development must be an enjoyable and creative experience to be truly fulfilling. Laravel takes the pain out of development by easing common tasks used in many web projects, such as:
+-   **Interactive Visualization**: Explore your family tree with a dynamic, zoomable graph powered by D3.js.
+-   **Manage Family Members**: Easily add, edit, and remove family members.
+-   **Relationship Tracking**: Define relationships including parents, spouses, and children.
+-   **Photo Management**: Upload and crop profile photos for each family member.
+-   **Multiple Trees**: Create and manage multiple distinct family trees.
+-   **Dark Mode**: Fully supported dark mode for a comfortable viewing experience in any lighting.
+-   **Responsive Design**: Works great on desktops, tablets, and mobile devices.
+-   **Secure Authentication**: User accounts to keep your family data private.
 
-- [Simple, fast routing engine](https://laravel.com/docs/routing).
-- [Powerful dependency injection container](https://laravel.com/docs/container).
-- Multiple back-ends for [session](https://laravel.com/docs/session) and [cache](https://laravel.com/docs/cache) storage.
-- Expressive, intuitive [database ORM](https://laravel.com/docs/eloquent).
-- Database agnostic [schema migrations](https://laravel.com/docs/migrations).
-- [Robust background job processing](https://laravel.com/docs/queues).
-- [Real-time event broadcasting](https://laravel.com/docs/broadcasting).
+## Tech Stack
 
-Laravel is accessible, powerful, and provides tools required for large, robust applications.
+-   **Backend**: [Laravel](https://laravel.com)
+-   **Frontend**: [Livewire](https://livewire.laravel.com), [Blade](https://laravel.com/docs/blade)
+-   **Styling**: [Tailwind CSS](https://tailwindcss.com)
+-   **Interactivity**: [Alpine.js](https://alpinejs.dev)
+-   **Visualization**: [D3.js](https://d3js.org)
+-   **Database**: MySQL / SQLite (configurable)
 
-## Learning Laravel
+## Installation
 
-Laravel has the most extensive and thorough [documentation](https://laravel.com/docs) and video tutorial library of all modern web application frameworks, making it a breeze to get started with the framework. You can also check out [Laravel Learn](https://laravel.com/learn), where you will be guided through building a modern Laravel application.
+1.  **Clone the repository**
+    ```bash
+    git clone https://github.com/yourusername/family-tree.git
+    cd family-tree
+    ```
 
-If you don't feel like reading, [Laracasts](https://laracasts.com) can help. Laracasts contains thousands of video tutorials on a range of topics including Laravel, modern PHP, unit testing, and JavaScript. Boost your skills by digging into our comprehensive video library.
+2.  **Install PHP dependencies**
+    ```bash
+    composer install
+    ```
 
-## Laravel Sponsors
+3.  **Install NPM dependencies**
+    ```bash
+    npm install
+    ```
 
-We would like to extend our thanks to the following sponsors for funding Laravel development. If you are interested in becoming a sponsor, please visit the [Laravel Partners program](https://partners.laravel.com).
+4.  **Environment Setup**
+    ```bash
+    cp .env.example .env
+    php artisan key:generate
+    ```
+    Configure your database settings in `.env`.
 
-### Premium Partners
+5.  **Run Migrations**
+    ```bash
+    php artisan migrate
+    ```
 
-- **[Vehikl](https://vehikl.com)**
-- **[Tighten Co.](https://tighten.co)**
-- **[Kirschbaum Development Group](https://kirschbaumdevelopment.com)**
-- **[64 Robots](https://64robots.com)**
-- **[Curotec](https://www.curotec.com/services/technologies/laravel)**
-- **[DevSquad](https://devsquad.com/hire-laravel-developers)**
-- **[Redberry](https://redberry.international/laravel-development)**
-- **[Active Logic](https://activelogic.com)**
+6.  **Build Assets**
+    ```bash
+    npm run build
+    ```
 
-## Contributing
+7.  **Serve the Application**
+    ```bash
+    php artisan serve
+    ```
 
-Thank you for considering contributing to the Laravel framework! The contribution guide can be found in the [Laravel documentation](https://laravel.com/docs/contributions).
+    Visit `http://localhost:8000` in your browser.
 
-## Code of Conduct
+## Usage
 
-In order to ensure that the Laravel community is welcoming to all, please review and abide by the [Code of Conduct](https://laravel.com/docs/contributions#code-of-conduct).
-
-## Security Vulnerabilities
-
-If you discover a security vulnerability within Laravel, please send an e-mail to Taylor Otwell via [taylor@laravel.com](mailto:taylor@laravel.com). All security vulnerabilities will be promptly addressed.
+1.  **Register/Login**: Create an account to start.
+2.  **Create a Tree**: Go to "My Trees" and create a new family tree.
+3.  **Add People**: Start adding people to your tree. You can add parents, spouses, and children directly from a person's profile.
+4.  **Visualize**: Click "View Tree" to see the interactive graph. Use the "Show Whole Tree" button to see all connections or focus on a specific individual.
 
 ## License
 
-The Laravel framework is open-sourced software licensed under the [MIT license](https://opensource.org/licenses/MIT).
+This project is open-sourced software licensed under the [GNU General Public License v3.0](https://www.gnu.org/licenses/gpl-3.0.html).

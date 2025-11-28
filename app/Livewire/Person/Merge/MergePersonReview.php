@@ -8,7 +8,7 @@ use App\Models\FamilyTree;
 use App\Models\Person;
 use App\Actions\People\MergePeopleAction;
 
-#[Layout('components.layouts.app')]
+#[Layout('components.layouts.tree')]
 class MergePersonReview extends Component
 {
     public FamilyTree $tree;

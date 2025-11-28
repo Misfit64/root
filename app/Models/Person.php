@@ -45,7 +45,8 @@ class Person extends Model
     public function spouses()
     {
         return $this->belongsToMany(Person::class, 'relationships', 'person_id', 'relative_id')
-            ->where('relationship_type', RelationshipType::Spouse->value);
+            ->where('relationship_type', RelationshipType::Spouse->value)
+            ->withPivot('relationship_subtype');
     }
 
     public function siblings()

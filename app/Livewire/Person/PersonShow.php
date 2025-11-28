@@ -7,7 +7,7 @@ use App\Models\FamilyTree;
 use App\Models\Person;
 use Livewire\Attributes\Layout;
 
-#[Layout('components.layouts.app')]
+#[Layout('components.layouts.tree')]
 class PersonShow extends Component
 {
     protected $listeners = ['person-updated' => '$refresh', 'spouse-added' => 'closeAddSpouse', 'parent-added' => 'closeAddParent', 'child-added' => 'closeAddChild', 'person-edit-closed' => 'closeEditPerson'];
@@ -28,6 +28,8 @@ class PersonShow extends Component
     {
         $this->tree = $tree;
         $this->person = $person;
+        
+        $this->authorize('view', $this->person);
     }
 
     public function render()

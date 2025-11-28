@@ -11,11 +11,23 @@
             @endif
         </div>
         
-        {{-- Add New Person Button --}}
-        <button wire:click="openAddPerson" class="px-4 py-2 bg-green-600 text-white rounded hover:bg-green-700 shadow transition flex items-center gap-2">
-            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path></svg>
-            Add New Person
-        </button>
+        <div class="flex gap-2">
+            {{-- Show Whole Tree Button --}}
+            @if($people->count() > 0)
+                <a href="{{ route('tree.graph', ['tree' => $tree->id, 'person' => $people->first()->id, 'whole_tree' => 1]) }}" class="px-4 py-2 bg-indigo-600 text-white rounded hover:bg-indigo-700 shadow transition flex items-center gap-2">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 12l3-3 3 3 4-4M8 21l4-4 4 4M3 4h18M4 4h16v12a1 1 0 01-1 1H5a1 1 0 01-1-1V4z"></path></svg>
+                    Show Whole Tree
+                </a>
+            @endif
+
+            {{-- Add New Person Button --}}
+            @can('update', $tree)
+            <button wire:click="openAddPerson" class="px-4 py-2 bg-green-600 text-white rounded hover:bg-green-700 shadow transition flex items-center gap-2">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path></svg>
+                Add New Person
+            </button>
+            @endcan
+        </div>
     </div>
 
     {{-- Search Bar --}}
@@ -64,6 +76,7 @@
                         <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
                             <div class="flex justify-end gap-2">
                                 <a href="{{ route('person.show', ['tree' => $tree->id, 'person' => $person->id]) }}" class="text-blue-600 hover:text-blue-900 dark:text-blue-400 dark:hover:text-blue-300">View</a>
+                                @can('update', $tree)
                                 <button wire:click="editPerson({{ $person->id }})" class="text-yellow-600 hover:text-yellow-900 dark:text-yellow-400 dark:hover:text-yellow-300">Edit</button>
                                 <button 
                                     wire:click="deletePerson({{ $person->id }})"
@@ -71,6 +84,7 @@
                                 >
                                     Delete
                                 </button>
+                                @endcan
                             </div>
                         </td>
                     </tr>
@@ -114,7 +128,7 @@
                         <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
                     </button>
                 </div>
-                <livewire:person.actions.edit-person-form :person="\App\Models\Person::find($editingPersonId)" />
+                <livewire:person.actions.edit-person-form :person="$this->editingPerson" />
             </div>
         </div>
     @endif

@@ -8,7 +8,7 @@ use App\Models\FamilyTree;
 use App\Models\Person;
 use Livewire\WithPagination;
 
-#[Layout('components.layouts.app')]
+#[Layout('components.layouts.tree')]
 class TreeShow extends Component
 {
     use WithPagination;
@@ -33,10 +33,7 @@ class TreeShow extends Component
     {
         $this->tree = $tree;
         
-        // Ensure the user owns the tree
-        if ($tree->user_id !== auth()->id()) {
-            abort(403);
-        }
+        $this->authorize('view', $this->tree);
     }
 
     public function updatedSearch()
@@ -96,6 +93,11 @@ class TreeShow extends Component
         $this->showEditModal = false;
         $this->editingPersonId = null;
         $this->dispatch('$refresh');
+    }
+
+    public function getEditingPersonProperty()
+    {
+        return $this->editingPersonId ? Person::find($this->editingPersonId) : null;
     }
 
     public function render()

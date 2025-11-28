@@ -7,7 +7,7 @@ use Livewire\Attributes\Layout;
 use App\Models\FamilyTree;
 use App\Models\Person;
 
-#[Layout('components.layouts.app')]
+#[Layout('components.layouts.tree')]
 class MergePersonSelect extends Component
 {
     public FamilyTree $tree;

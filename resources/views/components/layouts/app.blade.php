@@ -1,54 +1,25 @@
-<!DOCTYPE html>
-<html lang="en" class="h-full bg-gray-100 dark:bg-gray-900">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+<x-layouts.base>
+    <x-slot:head>
+        <!-- CropperJS -->
+        <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.5.13/cropper.min.css">
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.5.13/cropper.min.js"></script>
+    </x-slot:head>
 
-    <title>{{ $title ?? 'Family Tree' }}</title>
+    <div class="min-h-screen bg-gray-100 dark:bg-gray-900">
+        <x-navbar />
 
-    @vite(['resources/css/app.css', 'resources/js/app.js'])
-    @livewireStyles
-    
-    <!-- CropperJS -->
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.5.13/cropper.min.css">
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.5.13/cropper.min.js"></script>
-</head>
-<body class="h-full text-gray-900 dark:text-gray-100">
+        <!-- Page Heading -->
+        @if (isset($header))
+            <header class="bg-white dark:bg-gray-800 shadow">
+                <div class="max-w-7xl mx-auto py-6 px-4 sm:px-6 lg:px-8">
+                    {{ $header }}
+                </div>
+            </header>
+        @endif
 
-    <!-- Navbar -->
-    <header class="bg-white dark:bg-gray-800 shadow">
-        <div class="max-w-7xl mx-auto px-4 py-4 flex justify-between items-center">
-            <div class="flex items-center gap-4">
-                <a href="/" class="text-xl font-bold text-blue-700 dark:text-blue-400">
-                    FamilyTree
-                </a>
-                {{-- Breadcrumbs Placeholder --}}
-                @if(isset($breadcrumbs))
-                    <nav class="hidden md:flex items-center text-sm text-gray-500 dark:text-gray-400">
-                        <span class="mx-2">/</span>
-                        {{ $breadcrumbs }}
-                    </nav>
-                @endif
-            </div>
-
-            <nav>
-                @auth
-                    <form method="POST" action="{{ route('logout') }}" class="inline">
-                        @csrf
-                        <button type="submit" class="text-gray-600 hover:text-gray-900 dark:text-gray-300 dark:hover:text-white">Logout</button>
-                    </form>
-                @else
-                    <a href="{{ route('login') }}" class="text-gray-600 hover:text-gray-900 dark:text-gray-300 dark:hover:text-white">Login</a>
-                @endauth
-            </nav>
-        </div>
-    </header>
-
-    <!-- Page Content -->
-    <main class="max-w-5xl mx-auto mt-8 px-4">
-        {{ $slot }}
-    </main>
-
-    @livewireScripts
-</body>
-</html>
+        <!-- Page Content -->
+        <main>
+            {{ $slot }}
+        </main>
+    </div>
+</x-layouts.base>

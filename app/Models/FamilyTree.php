@@ -19,4 +19,16 @@ class FamilyTree extends Model
     protected $casts = [
         'visibility' => TreeVisibility::class,
     ];
+
+    public function members()
+    {
+        return $this->belongsToMany(User::class, 'tree_members')
+            ->withPivot('role')
+            ->withTimestamps();
+    }
+
+    public function owner()
+    {
+        return $this->belongsTo(User::class, 'user_id');
+    }
 }

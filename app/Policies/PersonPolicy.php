@@ -1,0 +1,69 @@
+<?php
+
+namespace App\Policies;
+
+use App\Models\Person;
+use App\Models\User;
+use Illuminate\Auth\Access\Response;
+
+class PersonPolicy
+{
+    /**
+     * Determine whether the user can view any models.
+     */
+    public function viewAny(User $user): bool
+    {
+        return false;
+    }
+
+    /**
+     * Determine whether the user can view the model.
+     */
+    /**
+     * Determine whether the user can view the model.
+     */
+    public function view(?User $user, Person $person): bool
+    {
+        return $user ? $user->can('view', $person->familyTree) : $person->familyTree->is_public;
+    }
+
+    /**
+     * Determine whether the user can create models.
+     */
+    public function create(User $user): bool
+    {
+        return true; // Creation is usually checked against the Tree
+    }
+
+    /**
+     * Determine whether the user can update the model.
+     */
+    public function update(User $user, Person $person): bool
+    {
+        return $user->can('update', $person->familyTree);
+    }
+
+    /**
+     * Determine whether the user can delete the model.
+     */
+    public function delete(User $user, Person $person): bool
+    {
+        return $user->can('update', $person->familyTree);
+    }
+
+    /**
+     * Determine whether the user can restore the model.
+     */
+    public function restore(User $user, Person $person): bool
+    {
+        return $user->can('update', $person->familyTree);
+    }
+
+    /**
+     * Determine whether the user can permanently delete the model.
+     */
+    public function forceDelete(User $user, Person $person): bool
+    {
+        return $user->can('update', $person->familyTree);
+    }
+}

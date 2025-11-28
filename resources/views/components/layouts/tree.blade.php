@@ -1,4 +1,4 @@
-<x-layouts.base :title="$title ?? 'Family Tree'" :bodyClass="'h-full flex flex-col text-gray-900 dark:text-gray-100 overflow-hidden'">
+<x-layouts.base :title="$title ?? 'Family Tree'">
     <x-slot:head>
         <!-- CropperJS -->
         <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.5.13/cropper.min.css">
@@ -6,7 +6,7 @@
     </x-slot:head>
 
     <!-- Navbar -->
-    <x-navbar class="z-20 relative">
+    <x-navbar>
         @if(isset($breadcrumbs))
             <x-slot:breadcrumbs>
                 {{ $breadcrumbs }}
@@ -15,7 +15,7 @@
     </x-navbar>
 
     <!-- Page Content -->
-    <main class="flex-grow flex flex-col relative overflow-hidden">
+    <main class="max-w-5xl mx-auto mt-8 px-4">
         {{ $slot }}
     </main>
 </x-layouts.base>
