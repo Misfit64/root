@@ -2,6 +2,7 @@
 
 <!DOCTYPE html>
 <html lang="{{ str_replace('_', '-', app()->getLocale()) }}" class="{{ $htmlClass }}">
+
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
@@ -19,18 +20,28 @@
 
     <!-- Dark Mode Script -->
     <script>
-        if (localStorage.getItem('darkMode') === 'true' || (!('darkMode' in localStorage) && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
-            document.documentElement.classList.add('dark');
-        } else {
-            document.documentElement.classList.remove('dark');
+        function applyTheme() {
+            if (localStorage.getItem('darkMode') === 'true' || (!('darkMode' in localStorage) && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
+                document.documentElement.classList.add('dark');
+            } else {
+                document.documentElement.classList.remove('dark');
+            }
         }
+
+        // Apply on initial load
+        applyTheme();
+
+        // Apply on Livewire navigation
+        document.addEventListener('livewire:navigated', applyTheme);
     </script>
 
     {{ $head ?? '' }}
 </head>
+
 <body class="{{ $bodyClass }}">
     {{ $slot }}
 
     @livewireScripts
 </body>
+
 </html>

@@ -19,6 +19,7 @@ class TreeGraph extends Component
     public $isWholeTree = false;
     public $originalRootId;
     private $visitedIds = [];
+    private $descendantIds = []; // Cache for primary nodes
     private ?TreeTraversalStrategy $traversalStrategy = null;
     private $nodeDepths = [];
     private $rootShadowCounts = [];
@@ -29,7 +30,7 @@ class TreeGraph extends Component
         $this->tree = $tree;
         $this->rootPerson = Person::findOrFail($person);
         $this->originalRootId = $this->rootPerson->id;
-        
+
         $this->authorize('view', $this->tree);
 
         if ($this->tree->is_public || request()->query('whole_tree')) {
@@ -67,9 +68,10 @@ class TreeGraph extends Component
             // Prefer father (gender 1)
             $father = $current->parents->firstWhere('gender', Gender::Male);
             $next = $father ?? $current->parents->first();
-            
-            if (in_array($next->id, $visited)) break; // Prevent cycles
-            
+
+            if (in_array($next->id, $visited))
+                break; // Prevent cycles
+
             $current = $next;
             $visited[] = $current->id;
         }
@@ -81,7 +83,7 @@ class TreeGraph extends Component
     {
         // 1. Map every person to their RootID and Depth relative to that root
         $personMap = []; // [person_id => ['root_id' => int, 'depth' => int]]
-        
+
         foreach ($roots as $root) {
             $this->mapTree($root, $root->id, 0, $personMap);
         }
@@ -90,9 +92,9 @@ class TreeGraph extends Component
         // We want to find relative generation offsets between roots.
         // Gen(RootA) + Offset = Gen(RootB)
         // We can build a graph where nodes are RootIDs and edges are offsets.
-        
+
         $adj = []; // [root_id => [[target_root_id, weight], ...]]
-        
+
         // Initialize adjacency list
         foreach ($roots as $root) {
             $adj[$root->id] = [];
@@ -101,7 +103,8 @@ class TreeGraph extends Component
         // Iterate through all people to find cross-tree connections
         foreach ($personMap as $personId => $info) {
             $person = Person::find($personId);
-            if (!$person) continue;
+            if (!$person)
+                continue;
 
             $rootA = $info['root_id'];
             $depthA = $info['depth'];
@@ -130,16 +133,16 @@ class TreeGraph extends Component
             // Wait, mapTree traverses descendants. So if a child is in another tree, it might be visited twice?
             // No, visitedIds prevents re-visiting.
             // But we need to handle the case where a person in Tree A is a parent of a person in Tree B.
-            
+
             // Let's check children who are NOT in the same tree (based on our map)
             // Actually, mapTree only traverses what buildDescendants traverses.
             // If buildDescendants stops at visited nodes, we need to check those boundaries.
-            
+
             foreach ($person->children as $child) {
                 if (isset($personMap[$child->id])) {
                     $rootB = $personMap[$child->id]['root_id'];
                     $depthB = $personMap[$child->id]['depth'];
-                    
+
                     if ($rootA !== $rootB) {
                         // Gen(RootA) + DepthA = Gen(RootB) + DepthB - 1 (Parent is 1 gen above child)
                         // Gen(RootB) - Gen(RootA) = DepthA - DepthB + 1
@@ -160,8 +163,9 @@ class TreeGraph extends Component
         }
 
         // Normalize so min generation is 0
-        if (empty($generations)) return [];
-        
+        if (empty($generations))
+            return [];
+
         $minGen = min($generations);
         foreach ($generations as $id => $gen) {
             $generations[$id] = $gen - $minGen;
@@ -172,7 +176,8 @@ class TreeGraph extends Component
 
     private function mapTree($person, $rootId, $depth, &$map)
     {
-        if (isset($map[$person->id])) return;
+        if (isset($map[$person->id]))
+            return;
         $map[$person->id] = ['root_id' => $rootId, 'depth' => $depth];
 
         foreach ($person->children as $child) {
@@ -189,12 +194,12 @@ class TreeGraph extends Component
     private function solveGenerations($u, $currentGen, $adj, &$generations)
     {
         $generations[$u] = $currentGen;
-        
+
         if (isset($adj[$u])) {
             foreach ($adj[$u] as $edge) {
                 $v = $edge['target'];
                 $weight = $edge['weight'];
-                
+
                 if (!isset($generations[$v])) {
                     $this->solveGenerations($v, $currentGen + $weight, $adj, $generations);
                 }
@@ -208,6 +213,7 @@ class TreeGraph extends Component
         $this->nodeDepths = [];
         $this->rootShadowCounts = [];
         $this->extraLinks = [];
+        $this->descendantIds = [];
 
         if ($this->isWholeTree) {
             // Forest View: Find all roots
@@ -217,7 +223,7 @@ class TreeGraph extends Component
                 ->get();
 
             // Filter out roots who have a spouse that HAS parents (they belong to another tree)
-            $roots = $roots->filter(function($root) {
+            $roots = $roots->filter(function ($root) {
                 foreach ($root->spouses as $spouse) {
                     if ($spouse->parents->count() > 0) {
                         return false;
@@ -225,7 +231,7 @@ class TreeGraph extends Component
                 }
                 return true;
             });
-                
+
             // Create a Virtual Root
             $virtualRoot = [
                 'name' => 'Family Tree',
@@ -235,7 +241,7 @@ class TreeGraph extends Component
                 'is_virtual' => true,
                 'children' => [],
             ];
-            
+
             // Sort roots by size (descendants count) to process larger trees first?
             // Or just process them. If we process a small tree that connects to a large tree later,
             // we might miss the depth info if the large tree hasn't been processed.
@@ -243,20 +249,25 @@ class TreeGraph extends Component
             // For now, let's assume the order is roughly correct or we handle it.
             // Actually, if we encounter a visited child, that child MUST have been processed already.
             // So we rely on the order.
-            
+
             // Calculate generations for alignment
             $rootGenerations = $this->calculateRootGenerations($roots);
             $this->rootShadowCounts = $rootGenerations;
 
             foreach ($roots as $root) {
-                if (in_array($root->id, $this->visitedIds)) continue;
+                if (in_array($root->id, $this->visitedIds))
+                    continue;
+
+                // Pre-calculate descendants for this root to prioritize them
+                // We merge them into the global descendantIds list
+                $this->descendantIds = array_merge($this->descendantIds, $this->getDescendantIds($root));
 
                 // Capture current root ID for the callback
                 $currentRootId = $root->id;
 
-                $rootNode = $this->buildDescendants($root, 0, 50, function($child, $parent, $depth) use ($currentRootId) {
-                     // Add extra link if we encounter a visited child
-                     $this->extraLinks[] = [
+                $rootNode = $this->buildDescendants($root, 0, 50, function ($child, $parent, $depth) use ($currentRootId) {
+                    // Add extra link if we encounter a visited child
+                    $this->extraLinks[] = [
                         'source' => $parent->id,
                         'target' => $child->id,
                         'type' => 'parent-child'
@@ -268,7 +279,7 @@ class TreeGraph extends Component
                     if (isset($this->rootShadowCounts[$root->id]) && $this->rootShadowCounts[$root->id] > 0) {
                         $count = $this->rootShadowCounts[$root->id];
                         $currentNode = $rootNode;
-                        
+
                         for ($i = 0; $i < $count; $i++) {
                             $shadow = [
                                 'name' => 'Shadow',
@@ -287,7 +298,7 @@ class TreeGraph extends Component
                     }
                 }
             }
-            
+
             return [
                 'ancestors' => null,
                 'descendants' => $virtualRoot,
@@ -295,6 +306,9 @@ class TreeGraph extends Component
                 'extra_links' => $this->extraLinks,
             ];
         }
+
+        // Standard View
+        $this->descendantIds = $this->getDescendantIds($this->rootPerson);
 
         $ancestors = $this->buildAncestors($this->rootPerson);
 
@@ -314,7 +328,31 @@ class TreeGraph extends Component
             'ancestors' => $ancestors,
             'descendants' => $this->buildDescendants($this->rootPerson, 0, 10),
             'siblings' => $this->rootPerson->siblings()->map(fn($s) => $this->formatNode($s))->values()->toArray(),
+            'extra_links' => $this->extraLinks, // Include extra links for standard view too
         ];
+    }
+
+    private function getDescendantIds($person, $maxDepth = 10)
+    {
+        $ids = [];
+        $queue = [[$person, 0]];
+        $visited = [$person->id];
+
+        while (!empty($queue)) {
+            [$current, $depth] = array_shift($queue);
+
+            if ($depth >= $maxDepth)
+                continue;
+
+            foreach ($current->children as $child) {
+                if (!in_array($child->id, $visited)) {
+                    $visited[] = $child->id;
+                    $ids[] = $child->id;
+                    $queue[] = [$child, $depth + 1];
+                }
+            }
+        }
+        return $ids;
     }
 
     private function formatNode($person, $depth = 0, $excludeSpouseId = null, $isMainTreeNode = false)
@@ -331,69 +369,86 @@ class TreeGraph extends Component
             'photo' => $person->default_photo_url,
             'birth_date' => $person->birth_date?->timestamp,
             'spouses' => $person->spouses
-                ->filter(function($s) use ($excludeSpouseId) {
-                    if ($s->id === $excludeSpouseId) return false;
+                ->filter(function ($s) use ($excludeSpouseId, $person) {
+                    if ($s->id === $excludeSpouseId)
+                        return false;
+
+                    // Check if spouse is a primary node (descendant) in this tree
+                    if (in_array($s->id, $this->descendantIds)) {
+                        // Add extra link to show the relationship
+                        $this->extraLinks[] = [
+                            'source' => $person->id,
+                            'target' => $s->id,
+                            'type' => 'spouse'
+                        ];
+                        return false; // Skip rendering as spouse node
+                    }
+
                     // Prevent duplicates: if spouse is already visited (e.g. as a sibling/child), don't render as spouse node.
                     // This avoids the same person appearing twice in the graph.
-                    if (in_array($s->id, $this->visitedIds)) return false;
+                    if (in_array($s->id, $this->visitedIds))
+                        return false;
                     return true;
                 })
-                ->map(function($s) use ($person, $isMainTreeNode) {
+                ->map(function ($s) use ($person, $isMainTreeNode) {
                     $this->visitedIds[] = $s->id;
                     // Recursively format spouse. 
                     // Spouses are NOT main tree nodes (they are attached to one).
                     $spouseData = $this->formatNode($s, 0, $person->id, false);
-                    
+
                     // Add relationship subtype from pivot
                     $spouseData['relationship_subtype'] = $s->pivot->relationship_subtype ?? null;
-                    
+
                     // Add children of the spouse
                     // Logic:
                     // 1. Exclude children already in the main tree (visitedIds).
                     // 2. Exclude children whose OTHER parent is a spouse of this spouse ($s), 
                     //    UNLESS the other parent is the current person ($person).
-                    
+        
                     // Eager load parents to ensure we can check them
                     $s->children->load('parents');
-                    
+
                     $spouseData['children'] = $s->children
-                        ->filter(function($child) use ($s, $person, $isMainTreeNode) {
+                        ->filter(function ($child) use ($s, $person, $isMainTreeNode) {
                             // 1. Exclude visited (main tree)
-                            if (in_array($child->id, $this->visitedIds)) return false;
-                            
+                            if (in_array($child->id, $this->visitedIds))
+                                return false;
+
                             // 2. Check other parent
                             // Find parent that is NOT $s
                             $otherParent = $child->parents->first(fn($p) => $p->id !== $s->id);
-                            
+
                             if ($otherParent) {
                                 // If other parent is the current person ($person):
                                 if ($otherParent->id === $person->id) {
                                     // If $person is a Main Tree Node, then this child is (or will be) in the main tree.
                                     // So we EXCLUDE it to avoid duplication.
-                                    if ($isMainTreeNode) return false;
-                                    
+                                    if ($isMainTreeNode)
+                                        return false;
+
                                     // If $person is NOT a Main Tree Node (e.g. he is a spouse in a chain),
                                     // then this child is NOT in the main tree. So we KEEP it.
                                     return true;
                                 }
-                                
+
                                 // If other parent is one of $s's spouses, we EXCLUDE it (defer to that spouse).
-                                if ($s->spouses->pluck('id')->contains($otherParent->id)) return false;
+                                if ($s->spouses->pluck('id')->contains($otherParent->id))
+                                    return false;
                             }
-                            
+
                             return true;
                         })
-                        ->map(function($child) {
+                        ->map(function ($child) {
                             return [
                                 'name' => $child->full_name,
                                 'id' => $child->id,
                                 'gender' => $child->gender?->value,
                                 'photo' => $child->default_photo_url,
                                 'birth_date' => $child->birth_date?->timestamp,
-                                'is_child_of_spouse' => true, 
+                                'is_child_of_spouse' => true,
                             ];
                         })->values()->toArray();
-                        
+
                     return $spouseData;
                 })->values()->toArray(),
         ];

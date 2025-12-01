@@ -5,17 +5,19 @@
         <script src="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.5.13/cropper.min.js"></script>
     </x-slot:head>
 
-    <!-- Navbar -->
-    <x-navbar>
-        @if(isset($breadcrumbs))
-            <x-slot:breadcrumbs>
-                {{ $breadcrumbs }}
-            </x-slot:breadcrumbs>
-        @endif
-    </x-navbar>
+    <div class="min-h-screen bg-gray-100 dark:bg-gray-900">
+        <!-- Navbar -->
+        <x-navbar>
+            @if(isset($breadcrumbs))
+                <x-slot:breadcrumbs>
+                    {{ $breadcrumbs }}
+                </x-slot:breadcrumbs>
+            @endif
+        </x-navbar>
 
-    <!-- Page Content -->
-    <main class="max-w-5xl mx-auto mt-8 px-4">
-        {{ $slot }}
-    </main>
+        <!-- Page Content -->
+        <main class="max-w-5xl mx-auto mt-8 px-4">
+            {{ $slot }}
+        </main>
+    </div>
 </x-layouts.base>

@@ -10,7 +10,7 @@ use Livewire\Attributes\Layout;
 #[Layout('components.layouts.tree')]
 class PersonShow extends Component
 {
-    protected $listeners = ['person-updated' => '$refresh', 'spouse-added' => 'closeAddSpouse', 'parent-added' => 'closeAddParent', 'child-added' => 'closeAddChild', 'person-edit-closed' => 'closeEditPerson'];
+    protected $listeners = ['person-updated' => '$refresh', 'spouse-added' => 'closeAddSpouse', 'parent-added' => 'closeAddParent', 'child-added' => 'closeAddChild', 'person-edit-closed' => 'closeEditPerson', 'relation-updated' => 'closeEditRelation'];
 
     public FamilyTree $tree;
     public Person $person;
@@ -28,7 +28,7 @@ class PersonShow extends Component
     {
         $this->tree = $tree;
         $this->person = $person;
-        
+
         $this->authorize('view', $this->person);
     }
 
@@ -97,6 +97,30 @@ class PersonShow extends Component
         $this->showEditPerson = false;
     }
 
+    // Edit Relation State
+    public bool $showEditRelation = false;
+    public ?int $editingRelationId = null;
+    public ?\App\Enums\RelationshipType $editingRelationType = null;
+
+    public function openEditRelation($personId, $type)
+    {
+        $this->editingRelationId = $personId;
+        $this->editingRelationType = \App\Enums\RelationshipType::from($type);
+        $this->showEditRelation = true;
+    }
+
+    public function closeEditRelation()
+    {
+        $this->showEditRelation = false;
+        $this->editingRelationId = null;
+        $this->editingRelationType = null;
+    }
+
+    public function getEditingRelationPersonProperty()
+    {
+        return $this->editingRelationId ? Person::find($this->editingRelationId) : null;
+    }
+
     public function confirmRemoveSpouse($spouseId)
     {
         $this->deleteTargetId = $spouseId;
@@ -127,7 +151,8 @@ class PersonShow extends Component
 
     public function executeDelete(\App\Services\RelationshipRemovalService $remover)
     {
-        if (!$this->deleteTargetId || !$this->deleteType) return;
+        if (!$this->deleteTargetId || !$this->deleteType)
+            return;
 
         $target = Person::findOrFail($this->deleteTargetId);
 

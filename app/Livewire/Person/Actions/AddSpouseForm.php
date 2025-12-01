@@ -6,17 +6,21 @@ use Livewire\Component;
 use App\Models\FamilyTree;
 use App\Models\Person;
 use App\Actions\People\AddSpouseAction;
+use App\Enums\RelationshipSubType;
+use Illuminate\Validation\Rules\Enum;
 
 class AddSpouseForm extends Component
 {
     public FamilyTree $familyTree;
     public Person $person;
     public $spouseId = null;
+    public $subtype;
 
     public function mount(FamilyTree $familyTree, Person $person)
     {
         $this->familyTree = $familyTree;
         $this->person = $person;
+        $this->subtype = RelationshipSubType::Married->value;
     }
 
     public $activeTab = 'search'; // 'search' or 'create'
@@ -36,6 +40,7 @@ class AddSpouseForm extends Component
         if ($this->activeTab === 'search') {
             $this->validate([
                 'spouseId' => 'required|exists:people,id',
+                'subtype' => ['required', new Enum(RelationshipSubType::class)],
             ]);
             $spouse = Person::findOrFail($this->spouseId);
         } else {
@@ -46,6 +51,7 @@ class AddSpouseForm extends Component
                 'newPerson.birth_date' => 'nullable|date',
                 'newPerson.death_date' => 'nullable|date|after_or_equal:newPerson.birth_date',
                 'newPerson.notes' => 'nullable|string',
+                'subtype' => ['required', new Enum(RelationshipSubType::class)],
             ]);
 
             $spouse = Person::create([
@@ -59,12 +65,13 @@ class AddSpouseForm extends Component
             ]);
         }
 
-        $addSpouseAction->handle($this->person, $spouse);
+        $subtypeEnum = RelationshipSubType::from($this->subtype);
+        $addSpouseAction->handle($this->person, $spouse, $subtypeEnum);
 
-        $this->dispatch('person-updated'); 
+        $this->dispatch('person-updated');
         $this->dispatch('spouse-added');
 
-        $this->reset(['spouseId', 'newPerson', 'activeTab']);
+        $this->reset(['spouseId', 'newPerson', 'activeTab', 'subtype']);
     }
 
     public function render()
