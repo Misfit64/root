@@ -8,6 +8,7 @@ use App\Models\Person;
 use App\Actions\People\AddSpouseAction;
 use App\Enums\RelationshipSubType;
 use Illuminate\Validation\Rules\Enum;
+use App\Enums\Gender;
 
 class AddSpouseForm extends Component
 {
@@ -47,7 +48,7 @@ class AddSpouseForm extends Component
             $this->validate([
                 'newPerson.first_name' => 'required|string|max:255',
                 'newPerson.last_name' => 'nullable|string|max:255',
-                'newPerson.gender' => ['required', new \Illuminate\Validation\Rules\Enum(\App\Enums\Gender::class)],
+                'newPerson.gender' => ['required', new Enum(Gender::class)],
                 'newPerson.birth_date' => 'nullable|date',
                 'newPerson.death_date' => 'nullable|date|after_or_equal:newPerson.birth_date',
                 'newPerson.notes' => 'nullable|string',
